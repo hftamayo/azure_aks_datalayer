@@ -40,3 +40,5 @@ spec:
       - name: pgdata
         persistentVolumeClaim:
           claimName: pgdata-pvc
+      imagePullSecrets:
+      - name: regcred

@@ -30,7 +30,7 @@ jobs:
 
     - name: Create AKS Cluster
       run: |
-        az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --enable-addons monitoring --generate-ssh-keys --service-principal ${{ env.SP_CREDENTIALS }}
+        az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --enable-addons monitoring --generate-ssh-keys --service-principal ${{ env.SP_CREDENTIALS }} --location westus2 --node-vm-size "Standard_B2s"
 
     - name: Get AKS Credentials
       run: |

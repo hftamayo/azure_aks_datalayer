@@ -18,19 +18,21 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Extract Client Secret
+    - name: Extract Service Principal and Client Secret
       run: |
-        CLIENT_SECRET=$(echo ${{ env.AZURE_CREDENTIALS }} | jq -r .clientSecret)
-        echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV        
+        SP_APP_ID=$(echo ${{ secrets.AZURE_CREDENTIALS }} | jq -r .clientId)
+        CLIENT_SECRET=$(echo ${{ secrets.AZURE_CREDENTIALS }} | jq -r .clientSecret)
+        echo "SP_APP_ID=$SP_APP_ID" >> $GITHUB_ENV
+        echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
 
     - name: Create AKS Cluster
       run: |
-        az aks create --resource-group tstodogroup --name tstodocluster --node-count 1 --enable-addons monitoring --generate-ssh-keys --service-principal ${{ secrets.AZURE_CLIENT_ID }} --client-secret ${{ env.CLIENT_SECRET }} --location westus2 --node-vm-size "Standard_B2s"
-
+        az aks create --resource-group tstodogroup --name tstodocluster --node-count 1 --enable-addons monitoring --generate-ssh-keys --service-principal ${{ env.SP_APP_ID }} --client-secret ${{ env.CLIENT_SECRET }} --location westus2 --node-vm-size "Standard_B2s"
+  
     - name: Get AKS Credentials
       run: |
         az aks get-credentials --resource-group tstodogroup --name tstodocluster
-
+  
     - name: Create Docker Hub Secret
       run: |
         kubectl create secret docker-registry regcred \

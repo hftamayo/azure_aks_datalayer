@@ -24,10 +24,6 @@ jobs:
         CLIENT_SECRET=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .clientSecret)
         echo "SP_APP_ID=$SP_APP_ID" >> $GITHUB_ENV
         echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
-
-    - name: Delete Existing AKS Cluster if Exists
-      run: |
-        az aks delete --name tstodocluster --resource-group tstodogroup --yes --no-wait || true
   
     - name: Create AKS Cluster
       run: |

@@ -33,6 +33,10 @@ jobs:
       run: |
         az aks get-credentials --resource-group tstodogroup --name tstodocluster
   
+    - name: Verify Kubernetes Context
+      run: |
+        kubectl config current-context  
+
     - name: Create Docker Hub Secret
       run: |
         kubectl create secret docker-registry regcred \

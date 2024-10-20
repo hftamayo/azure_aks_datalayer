@@ -37,6 +37,18 @@ jobs:
       run: |
         kubectl config current-context  
 
+    - name: Print Kubernetes Configuration
+      run: |
+        kubectl config view        
+
+    - name: Describe Deployment
+      run: |
+        kubectl describe deployment pgdatalayer
+
+    - name: Get Pod Logs
+      run: |
+        kubectl logs -l app=pgdatalayer        
+
     - name: Create Docker Hub Secret
       run: |
         kubectl create secret docker-registry regcred \

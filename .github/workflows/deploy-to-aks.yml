@@ -41,14 +41,6 @@ jobs:
       run: |
         kubectl config view        
 
-    - name: Describe Deployment
-      run: |
-        kubectl describe deployment pgdatalayer
-
-    - name: Get Pod Logs
-      run: |
-        kubectl logs -l app=pgdatalayer        
-
     - name: Create Docker Hub Secret
       run: |
         kubectl create secret docker-registry regcred \
@@ -75,3 +67,19 @@ jobs:
         POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
         POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+
+    - name: Wait for Deployment Rollout
+      run: |
+        kubectl rollout status deployment/pgdatalayer
+
+    - name: List Deployments
+      run: |
+        kubectl get deployments
+
+    - name: Describe Deployment
+      run: |
+        kubectl describe deployment pgdatalayer
+
+    - name: Get Pod Logs
+      run: |
+        kubectl logs -l app=pgdatalayer                

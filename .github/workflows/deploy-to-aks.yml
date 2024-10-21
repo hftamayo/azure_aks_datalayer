@@ -22,6 +22,10 @@ jobs:
       run: |
         az aks install-cli
 
+    - name: Create AKS Cluster
+      run: |
+          az aks create --resource-group tstodogroup --name tstodocluster --node-count 1 --enable-addons monitoring --generate-ssh-keys --location westus --node-vm-size "Standard_B2s"
+
     - name: Get AKS Credentials
       run: |
         az aks get-credentials --resource-group tstodogroup --name tstodocluster --admin

@@ -71,7 +71,7 @@ jobs:
 
     - name: Wait for Deployment Rollout
       run: |
-        kubectl rollout status deployment/pgdatalayer
+        kubectl rollout status deployment/pgdatalayer --timeout=10m
 
     - name: List Deployments
       run: |

@@ -18,17 +18,66 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    - name: Check Azure CLI version
+      run: az --version        
+
     - name: Install kubelogin
       run: |
         az aks install-cli
 
+    - name: Assign Log Analytics Contributor Role
+      run: |
+        SP_ID=$(az ad sp list --display-name pgdbmssp --query "[].appId" -o tsv)
+        az role assignment create --assignee $SP_ID --role "Log Analytics Contributor" --scope /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/pgdbmsgroup        
+
+    - name: Create Log Analytics Workspace
+      run: |
+        az monitor log-analytics workspace create --resource-group pgdbmsgroup --workspace-name pgdbmsWorkspace --location westus
+  
+    - name: Wait for Log Analytics Workspace to be ready
+      run: |
+        echo "Waiting for Log Analytics Workspace to be ready..."
+        for i in {1..10}; do
+          WORKSPACE_STATUS=$(az monitor log-analytics workspace show --resource-group pgdbmsgroup --workspace-name pgdbmsWorkspace --query "provisioningState" -o tsv)
+          if [ "$WORKSPACE_STATUS" == "Succeeded" ]; then
+            echo "Log Analytics Workspace is ready."
+            break
+          fi
+          echo "Log Analytics Workspace is not ready yet. Waiting..."
+          sleep 30
+        done
+
     - name: Create AKS Cluster
       run: |
-          az aks create --resource-group tstodogroup --name tstodocluster --node-count 1 --enable-addons monitoring --generate-ssh-keys --location westus --node-vm-size "Standard_B2s"
+        if az aks show --resource-group pgdbmsgroup --name pgdbmscluster > /dev/null 2>&1; then
+          echo "AKS Cluster already exists. Skipping creation."
+        else
+          az aks create --resource-group pgdbmsgroup --name pgdbmscluster --node-count 1 --enable-addons monitoring --workspace-resource-id $(az monitor log-analytics workspace show --resource-group pgdbmsgroup --workspace-name pgdbmsWorkspace --query id -o tsv) --generate-ssh-keys --location westus --node-vm-size "Standard_B2s"
+        fi
+
+    - name: Wait for AKS Cluster to be ready
+      run: |
+        echo "Waiting for AKS Cluster to be ready..."
+        for i in {1..20}; do
+          CLUSTER_STATUS=$(az aks show --resource-group pgdbmsgroup --name pgdbmscluster --query "provisioningState" -o tsv)
+          if [ "$CLUSTER_STATUS" == "Succeeded" ]; then
+            echo "AKS Cluster is ready."
+            break
+          fi
+          echo "AKS Cluster is not ready yet. Waiting..."
+          sleep 30
+        done
 
     - name: Get AKS Credentials
       run: |
-        az aks get-credentials --resource-group tstodogroup --name tstodocluster --admin
+        az aks get-credentials --resource-group pgdbmsgroup --name pgdbmscluster --admin
+
+    - name: Set AKS Context
+      uses: azure/aks-set-context@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        resource-group: pgdbmsgroup
+        cluster-name: pgdbmscluster
 
     - name: Configure kubelogin
       run: |
@@ -44,11 +93,15 @@ jobs:
 
     - name: Create Docker Hub Secret
       run: |
-        kubectl create secret docker-registry regcred \
-          --docker-server=https://index.docker.io/v1/ \
-          --docker-username=${{ secrets.DOCKER_HUB_USERNAME }} \
-          --docker-password=${{ secrets.DOCKER_HUB_PAT }} \
-          --docker-email=${{ secrets.DOCKER_HUB_EMAIL }}
+        if kubectl get secret regcred > /dev/null 2>&1; then
+          echo "Docker Hub Secret already exists. Skipping creation."
+        else
+          kubectl create secret docker-registry regcred \
+            --docker-server=https://index.docker.io/v1/ \
+            --docker-username=${{ secrets.DOCKER_HUB_USERNAME }} \
+            --docker-password=${{ secrets.DOCKER_HUB_PAT }} \
+            --docker-email=${{ secrets.DOCKER_HUB_EMAIL }}
+        fi
 
     - name: Login to Docker Hub
       run: |
@@ -62,8 +115,8 @@ jobs:
       uses: azure/k8s-deploy@v1
       with:
         manifests: |
-          pg_deployment.yaml
-          pg_service.yaml
+          pg_deployment.yml
+          pg_service.yml
       env:
         POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
         POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}

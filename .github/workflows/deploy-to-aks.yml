@@ -116,18 +116,7 @@ jobs:
         if kubectl get pvc pgdata-pvc > /dev/null 2>&1; then
           echo "Persistent Volume Claim already exists. Skipping creation."
         else
-          kubectl apply -f - <<EOF
-          apiVersion: v1
-          kind: PersistentVolumeClaim
-          metadata:
-            name: pgdata-pvc
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 1Gi
-          EOF
+          kubectl apply -f pg_pvc.yml
         fi
 
     - name: Login to Docker Hub
